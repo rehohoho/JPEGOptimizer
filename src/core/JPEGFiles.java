@@ -204,6 +204,16 @@ public class JPEGFiles {
 			return false;
 		}
 	}
+
+    private boolean compress(File dstDir, int foundQuality) throws IOException {
+        if (_dst.exists()) {
+            log("   * Deleting existing destination file.");
+            _dst.delete();
+        }
+        log("   * Creating result destination file.");
+        ImageUtils.createJPEG(_src, _dst, foundQuality);
+        return true;
+    }
 	
 	public void optimize(File dstDir, double maxVisualDiff, long minFileSizeToOptimize, boolean overwriteDst) throws IOException {
 		System.out.println("Max Diff : " + maxVisualDiff);
@@ -227,6 +237,47 @@ public class JPEGFiles {
 				setState(OPTIMIZED_UNNECESSARY);
 			} else {
 				boolean isOptimized = optimize(dstDir, maxVisualDiff);
+				setState(isOptimized ? OPTIMIZED_OK : OPTIMIZED_KO);
+			}
+		}
+		
+		_end = System.currentTimeMillis();
+		
+		if (_state == OPTIMIZED_OK) {
+			success("Optimization done: from " + ReadableUtils.fileSize(_originalSrcSize) + " to " + ReadableUtils.fileSize(_dst.length()) + ". Earn " + ReadableUtils.rate(getEarnRate()));
+		} else if (_state == OPTIMIZED_KO) {
+			error("Unable to optimize file (too many visual difference when compressing).");
+		} else if (_state == OPTIMIZED_UNNECESSARY) {
+			success("Optimization unecessary (file already too small).");
+		} else if (_state == OPTIMIZED_OVERWRITE_NOT_ALLOWED) {
+			warn("Unable to optimize file (destination file already exists and overwrite is not allowed).");
+		}
+		log("Done in " + ReadableUtils.interval(_end-_start));
+		log("--------------------------------------------------------------------------------------");
+	}
+
+    public void compress(File dstDir, int quality, long minFileSizeToOptimize, boolean overwriteDst) throws IOException {
+		System.out.println("Using quality : " + quality);
+		_start = System.currentTimeMillis();
+		setState(OPTIMIZING);
+		log("Optimizing " + _src.getAbsolutePath() + " (" + ReadableUtils.fileSize(_originalSrcSize) + ")");
+		
+		if (_dst.exists() && (overwriteDst == false)) {
+			setState(OPTIMIZED_OVERWRITE_NOT_ALLOWED);
+		} else {
+			if (_src.length() <= minFileSizeToOptimize) {
+				if (_dst.getAbsolutePath().compareTo(_src.getAbsolutePath()) != 0) {
+					log(" - File too small, copy source file to destination.");
+					if (_dst.exists()) {
+						log("   * Deleting existing destination file.");
+						_dst.delete();
+					}				
+					log("   * Copying source file to destination.");
+					FileUtils.copyFile(_src, _dst);
+				}
+				setState(OPTIMIZED_UNNECESSARY);
+			} else {
+				boolean isOptimized = compress(dstDir, quality);
 				setState(isOptimized ? OPTIMIZED_OK : OPTIMIZED_KO);
 			}
 		}

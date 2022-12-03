@@ -395,7 +395,7 @@ public class Gui implements JDirectoryChooserListener, JPEGFilesListener {
 						_jList.ensureIndexIsVisible(i);
 						if (jpegFile.getSrc() != null) {
 							try {
-								jpegFile.optimize(_dstDir.getSelectedDirectory(), (Double)_maxVisualDiff.getSelectedItem(), minSize, overwriteDst);
+								jpegFile.compress(_dstDir.getSelectedDirectory(), 75, minSize, overwriteDst);
 								earnSize += isNull(jpegFile.getEarnSize(), 0);
 							} catch (IOException e) {
 								e.printStackTrace();
